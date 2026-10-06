@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Duel TIK Kelas 2 - Simultan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f0fdf4;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Fredoka', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+        .player-area {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1rem;
+            position: relative;
+        }
+        .player-1-bg { background-color: #f0f9ff; }
+        .player-2-bg { background-color: #fefce8; }
+        
+        .option-btn {
+            background-color: white;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .option-btn:active {
+            transform: scale(0.97);
+        }
+        .correct { 
+            background-color: #86efac !important; 
+            border-color: #22c55e !important; 
+            color: #14532d !important; 
+        }
+        .incorrect { 
+            background-color: #fca5a5 !important; 
+            border-color: #ef4444 !important; 
+            color: #7f1d1d !important; 
+        }
+        
+        .img-container {
+            height: 110px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 6px 0;
+        }
+
+        /* Responsive layout for split screen */
+        @media (min-width: 768px) {
+            #game-container {
+                display: flex;
+                flex-direction: row;
+            }
+            .player-area {
+                width: 50%;
+                border-right: 3px solid #cbd5e1;
+            }
+            .player-area:last-child {
+                border-right: none;
+            }
+        }
+        @media (max-width: 767px) {
+            #game-container {
+                display: flex;
+                flex-direction: column;
+            }
+            .player-area {
+                height: 50vh;
+                border-bottom: 3px solid #cbd5e1;
+            }
+            .player-area:last-child {
+                border-bottom: none;
+            }
+            /* Rotate player 1 area for face-to-face tablet/mobile play */
+            #player1-area {
+                transform: rotate(180deg);
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 50;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-green-100 to-blue-100 z-40 p-4">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-lg w-full border-4 border-green-400">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-green-600 mb-2">⚡ Balapan TIK Kelas 2 ⚡</h1>
+            <p class="text-gray-600 mb-6 font-semibold">Mulai bersamaan tanpa gantian! Siapa paling cepat dan tepat?</p>
+            
+            <div class="grid grid-cols-2 gap-4 mb-6 text-left text-sm font-bold">
+                <div class="bg-blue-50 p-3 rounded-xl border border-blue-200">
+                    <p class="text-blue-700">👤 Pemain 1 (Kiri / Atas)</p>
+                    <p class="text-gray-500 text-xs font-normal mt-1">Jawab soal di bagian birumu sesegera mungkin!</p>
+                </div>
+                <div class="bg-yellow-50 p-3 rounded-xl border border-yellow-200">
+                    <p class="text-yellow-700">👤 Pemain 2 (Kanan / Bawah)</p>
+                    <p class="text-gray-500 text-xs font-normal mt-1">Jawab soal di bagian kuningmu sesegera mungkin!</p>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="w-full py-4 bg-green-500 hover:bg-green-600 active:scale-95 text-white text-2xl font-black rounded-2xl shadow-lg transition duration-200">
+                🚀 MULAI BALAPAN!
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Screen (Simultaneous Split-Screen) -->
+    <div id="game-container" class="hidden h-screen w-full">
+        
+        <!-- Player 1 Side -->
+        <div id="player1-area" class="player-area player-1-bg">
+            <!-- Header -->
+            <div class="flex justify-between items-center bg-blue-500 text-white p-2 px-4 rounded-xl shadow-md">
+                <div>
+                    <h2 class="text-base font-bold">Pemain 1</h2>
+                    <p class="text-xs text-blue-100" id="p1-progress">Soal 1 / 20</p>
+                </div>
+                <div class="text-xl font-black bg-blue-700 px-3 py-1 rounded-lg">
+                    Skor: <span id="score1">0</span>
+                </div>
+            </div>
+            
+            <!-- Question Box -->
+            <div class="flex-grow flex flex-col justify-center items-center py-2 text-center">
+                <h3 id="q-text-1" class="text-base md:text-lg font-bold text-gray-800 px-2 min-h-[48px] flex items-center justify-center">
+                    Memuat soal...
+                </h3>
+                <div class="img-container w-full" id="img-container-1"></div>
+            </div>
+
+            <!-- Options -->
+            <div id="options-1" class="grid grid-cols-1 gap-2 mt-auto"></div>
+
+            <!-- Overlay Selesai P1 -->
+            <div id="p1-finished-overlay" class="hidden absolute inset-0 bg-blue-900/80 backdrop-blur-sm text-white flex-col items-center justify-center rounded-lg z-10 p-4 text-center">
+                <div class="text-4xl mb-2">🏁</div>
+                <h3 class="text-xl font-bold mb-1">Kamu Sudah Selesai!</h3>
+                <p class="text-sm text-blue-200">Menunggu Pemain 2 menyelesaikan soal...</p>
+            </div>
+        </div>
+
+        <!-- Player 2 Side -->
+        <div id="player2-area" class="player-area player-2-bg">
+            <!-- Header -->
+            <div class="flex justify-between items-center bg-amber-500 text-white p-2 px-4 rounded-xl shadow-md">
+                <div>
+                    <h2 class="text-base font-bold">Pemain 2</h2>
+                    <p class="text-xs text-amber-100" id="p2-progress">Soal 1 / 20</p>
+                </div>
+                <div class="text-xl font-black bg-amber-700 px-3 py-1 rounded-lg">
+                    Skor: <span id="score2">0</span>
+                </div>
+            </div>
+            
+            <!-- Question Box -->
+            <div class="flex-grow flex flex-col justify-center items-center py-2 text-center">
+                <h3 id="q-text-2" class="text-base md:text-lg font-bold text-gray-800 px-2 min-h-[48px] flex items-center justify-center">
+                    Memuat soal...
+                </h3>
+                <div class="img-container w-full" id="img-container-2"></div>
+            </div>
+
+            <!-- Options -->
+            <div id="options-2" class="grid grid-cols-1 gap-2 mt-auto"></div>
+
+            <!-- Overlay Selesai P2 -->
+            <div id="p2-finished-overlay" class="hidden absolute inset-0 bg-amber-900/80 backdrop-blur-sm text-white flex-col items-center justify-center rounded-lg z-10 p-4 text-center">
+                <div class="text-4xl mb-2">🏁</div>
+                <h3 class="text-xl font-bold mb-1">Kamu Sudah Selesai!</h3>
+                <p class="text-sm text-amber-200">Menunggu Pemain 1 menyelesaikan soal...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- End Game Modal -->
+    <div id="end-modal" class="modal">
+        <div class="bg-white p-6 rounded-3xl text-center max-w-sm w-full mx-4 shadow-2xl border-4 border-yellow-400">
+            <div class="text-5xl mb-2">🏆</div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Pertandingan Selesai!</h2>
+            <div class="text-lg font-bold mb-6" id="winner-text"></div>
+            
+            <div class="grid grid-cols-2 gap-3 mb-6 bg-gray-50 p-4 rounded-2xl border border-gray-200">
+                <div class="bg-blue-100 p-3 rounded-xl">
+                    <p class="font-bold text-blue-700 text-sm">Pemain 1</p>
+                    <p class="text-2xl font-black text-blue-900" id="final-score1">0</p>
+                </div>
+                <div class="bg-amber-100 p-3 rounded-xl">
+                    <p class="font-bold text-amber-700 text-sm">Pemain 2</p>
+                    <p class="text-2xl font-black text-amber-900" id="final-score2">0</p>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-bold text-lg rounded-xl shadow-md transition active:scale-95">
+                🔄 Main Lagi
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Database Soal Lengkap dari PTS TIK Kelas 2 (20 Soal)
+        const masterQuestions = [
+            {
+                q: "Teknik memegang mouse yang benar, posisi jempol berada di sebelah...",
+                imgHtml: `<div class="text-4xl">🖱👍</div>`,
+                options: ["Kiri", "Kanan", "Depan"],
+                answer: "Kiri"
+            },
+            {
+                q: "Teknik memegang mouse, posisi tiga jari berada di...",
+                imgHtml: `<div class="text-4xl">🖱️🖐️</div>`,
+                options: ["Atas", "Kiri", "Kanan"],
+                answer: "Atas"
+            },
+            {
+                q: "Posisi jari telunjuk tepat berada pada tombol mouse sebelah...",
+                imgHtml: `<div class="text-4xl">🖱️👈</div>`,
+                options: ["Kiri", "Kanan", "Tengah"],
+                answer: "Kiri"
+            },
+            {
+                q: "Untuk memutar tombol scroll pada mouse menggunakan jari...",
+                imgHtml: `<div class="text-4xl">🖱👇</div>`,
+                options: ["Telunjuk", "Jempol", "Kelingking"],
+                answer: "Telunjuk"
+            },
+            {
+                q: "Untuk menyalakan komputer, tekan tombol ... pada CPU.",
+                imgHtml: `<div class="w-12 h-12 rounded-full bg-red-100 border-2 border-red-500 flex items-center justify-center font-bold text-red-600 text-xl">⏻</div>`,
+                options: ["Power", "Reset", "Open"],
+                answer: "Power"
+            },
+            {
+                q: "Ikon Rectangle digunakan untuk menggambar bentuk...",
+                imgHtml: `<div class="w-16 h-10 border-4 border-gray-800 bg-blue-100"></div>`,
+                options: ["Kotak", "Oval", "Segitiga"],
+                answer: "Kotak"
+            },
+            {
+                q: "Tombol keyboard dengan simbol panah (↑, ↓, ←, →) disebut tombol...",
+                imgHtml: `<div class="font-mono text-xl bg-gray-200 px-3 py-1 rounded border border-gray-400">↑ ↓ ← →</div>`,
+                options: ["Panah", "Enter", "Angka"],
+                answer: "Panah"
+            },
+            {
+                q: "Kelompok tombol angka pada bagian kanan keyboard disebut tombol...",
+                imgHtml: `<div class="font-mono text-sm bg-gray-200 p-1 rounded border border-gray-400 font-bold">1 2 3<br>4 5 6</div>`,
+                options: ["Angka", "Panah", "Enter"],
+                answer: "Angka"
+            },
+            {
+                q: "Tombol pada keyboard yang berfungsi untuk menghapus huruf adalah...",
+                imgHtml: `<div class="font-mono text-xs bg-gray-200 px-3 py-2 rounded border border-gray-400 font-bold">⌫ Backspace</div>`,
+                options: ["Backspace", "Panah", "Enter"],
+                answer: "Backspace"
+            },
+            {
+                q: "Program komputer yang digunakan untuk menggambar adalah...",
+                imgHtml: `<div class="text-4xl">🎨</div>`,
+                options: ["Paint", "Word", "Google"],
+                answer: "Paint"
+            },
+            {
+                q: "Program aplikasi yang digunakan untuk membuka Internet adalah...",
+                imgHtml: `<div class="text-4xl">🌐</div>`,
+                options: ["Google / Chrome", "Paint", "Word"],
+                answer: "Google / Chrome"
+            },
+            {
+                q: "Ikon berhuruf 'A' pada program Paint berfungsi untuk membuat...",
+                imgHtml: `<div class="w-10 h-10 bg-gray-100 border-2 border-blue-400 rounded flex items-center justify-center font-black text-blue-600 text-xl">A</div>`,
+                options: ["Tulisan / Text", "Warna", "Penghapus"],
+                answer: "Tulisan / Text"
+            },
+            {
+                q: "Ikon bergambar kaleng cat tumpah (Fill with Color) berfungsi untuk...",
+                imgHtml: `<div class="text-4xl">🪣</div>`,
+                options: ["Mewarnai Gambar", "Menghapus Gambar", "Membuat Garis"],
+                answer: "Mewarnai Gambar"
+            },
+            {
+                q: "Ikon Eraser pada Paint digunakan untuk...",
+                imgHtml: `<div class="text-4xl">🧹</div>`,
+                options: ["Menghapus Gambar", "Mewarnai Gambar", "Membuat Tulisan"],
+                answer: "Menghapus Gambar"
+            },
+            {
+                q: "Ikon Kaca Pembesar (Magnifier) berfungsi untuk...",
+                imgHtml: `<div class="text-4xl">🔍</div>`,
+                options: ["Membesarkan Tampilan", "Menghapus Tampilan", "Mengisi Warna"],
+                answer: "Membesarkan Tampilan"
+            },
+            {
+                q: "Untuk menyalin atau meng-copy gambar kita menggunakan ikon...",
+                imgHtml: `<div class="text-4xl">📋</div>`,
+                options: ["Copy", "Cut", "Undo"],
+                answer: "Copy"
+            },
+            {
+                q: "Jika gambar salah, kita bisa membatalkan kesalahan tersebut dengan tombol...",
+                imgHtml: `<div class="text-4xl">↩️</div>`,
+                options: ["Undo", "Redo", "Copy"],
+                answer: "Undo"
+            },
+            {
+                q: "Untuk mengembalikan gambar yang sudah dibatalkan (Undo), kita memakai...",
+                imgHtml: `<div class="text-4xl">↪️</div>`,
+                options: ["Redo", "Undo", "Cut"],
+                answer: "Redo"
+            },
+            {
+                q: "Ikon untuk menggambar bentuk lingkaran / lonjong adalah...",
+                imgHtml: `<div class="w-12 h-8 border-4 border-red-500 rounded-full bg-red-50"></div>`,
+                options: ["Oval", "Rectangle", "Triangle"],
+                answer: "Oval"
+            },
+            {
+                q: "Setelah selesai menggambar dan ingin menyimpannya, klik menu...",
+                imgHtml: `<div class="text-4xl">💾</div>`,
+                options: ["Save / Save As", "New", "Open"],
+                answer: "Save / Save As"
+            }
+        ];
+
+        // Status Independen Pemain
+        let p1Questions = [];
+        let p2Questions = [];
+        let p1Index = 0;
+        let p2Index = 0;
+        let p1Score = 0;
+        let p2Score = 0;
+        let p1Finished = false;
+        let p2Finished = false;
+        let p1Lock = false;
+        let p2Lock = false;
+
+        function shuffleArray(array) {
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('end-modal').style.display = 'none';
+            document.getElementById('game-container').classList.remove('hidden');
+
+            document.getElementById('p1-finished-overlay').classList.add('hidden');
+            document.getElementById('p1-finished-overlay').classList.remove('flex');
+            document.getElementById('p2-finished-overlay').classList.add('hidden');
+            document.getElementById('p2-finished-overlay').classList.remove('flex');
+
+            // Acak soal secara terpisah untuk Pemain 1 dan Pemain 2
+            p1Questions = shuffleArray(masterQuestions);
+            p2Questions = shuffleArray(masterQuestions);
+
+            p1Index = 0;
+            p2Index = 0;
+            p1Score = 0;
+            p2Score = 0;
+            p1Finished = false;
+            p2Finished = false;
+            p1Lock = false;
+            p2Lock = false;
+
+            updateScoreUI();
+            
+            // Render Soal Pertama untuk Kedua Pemain Secara Bersamaan
+            renderPlayerQuestion(1);
+            renderPlayerQuestion(2);
+        }
+
+        function renderPlayerQuestion(playerNum) {
+            const isP1 = playerNum === 1;
+            const index = isP1 ? p1Index : p2Index;
+            const deck = isP1 ? p1Questions : p2Questions;
+
+            if (index >= deck.length) {
+                if (isP1) {
+                    p1Finished = true;
+                    const overlay1 = document.getElementById('p1-finished-overlay');
+                    overlay1.classList.remove('hidden');
+                    overlay1.classList.add('flex');
+                } else {
+                    p2Finished = true;
+                    const overlay2 = document.getElementById('p2-finished-overlay');
+                    overlay2.classList.remove('hidden');
+                    overlay2.classList.add('flex');
+                }
+
+                if (p1Finished && p2Finished) {
+                    setTimeout(endGame, 600);
+                }
+                return;
+            }
+
+            const q = deck[index];
+            const progressEl = document.getElementById(isP1 ? 'p1-progress' : 'p2-progress');
+            const qTextEl = document.getElementById(isP1 ? 'q-text-1' : 'q-text-2');
+            const imgEl = document.getElementById(isP1 ? 'img-container-1' : 'img-container-2');
+            const optContainer = document.getElementById(isP1 ? 'options-1' : 'options-2');
+
+            progressEl.innerText = `Soal ${index + 1} / ${deck.length}`;
+            qTextEl.innerText = q.q;
+            imgEl.innerHTML = q.imgHtml;
+
+            optContainer.innerHTML = '';
+            const shuffledOptions = shuffleArray(q.options);
+
+            shuffledOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(playerNum, opt, q.answer, btn);
+                optContainer.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(playerNum, selected, correct, clickedBtn) {
+            const isP1 = playerNum === 1;
+            
+            // Mencegah klik ganda saat transisi
+            if (isP1 && p1Lock) return;
+            if (!isP1 && p2Lock) return;
+
+            if (isP1) p1Lock = true;
+            else p2Lock = true;
+
+            const isCorrect = selected === correct;
+            const optContainer = document.getElementById(isP1 ? 'options-1' : 'options-2');
+            const buttons = optContainer.getElementsByTagName('button');
+
+            // Beri respon visual pada tombol
+            for (let btn of buttons) {
+                btn.disabled = true;
+                if (btn.innerText === correct) {
+                    btn.classList.add('correct');
+                } else if (btn.innerText === selected && !isCorrect) {
+                    btn.classList.add('incorrect');
+                }
+            }
+
+            if (isCorrect) {
+                if (isP1) p1Score += 5;
+                else p2Score += 5;
+                updateScoreUI();
+            }
+
+            // Lanjut ke soal berikutnya untuk pemain yang bersangkutan setelah 0.4s
+            setTimeout(() => {
+                if (isP1) {
+                    p1Index++;
+                    p1Lock = false;
+                    renderPlayerQuestion(1);
+                } else {
+                    p2Index++;
+                    p2Lock = false;
+                    renderPlayerQuestion(2);
+                }
+            }, 450);
+        }
+
+        function updateScoreUI() {
+            document.getElementById('score1').innerText = p1Score;
+            document.getElementById('score2').innerText = p2Score;
+        }
+
+        function endGame() {
+            document.getElementById('game-container').classList.add('hidden');
+            const modal = document.getElementById('end-modal');
+            modal.style.display = 'flex';
+
+            document.getElementById('final-score1').innerText = p1Score;
+            document.getElementById('final-score2').innerText = p2Score;
+
+            const winnerText = document.getElementById('winner-text');
+            if (p1Score > p2Score) {
+                winnerText.innerHTML = '🎉 <span class="text-blue-600 font-black">Pemain 1</span> Menang! 🎉';
+            } else if (p2Score > p1Score) {
+                winnerText.innerHTML = '🎉 <span class="text-amber-600 font-black">Pemain 2</span> Menang! 🎉';
+            } else {
+                winnerText.innerHTML = '🤝 Hasil Seri! Keduanya Hebat! 🤝';
+            }
+        }
+    </script>
+</body>
+</html>
